@@ -13,7 +13,7 @@ const generateAccessAndRefreshTokens = async(userId) =>{
         const accessToken = user.generateAccessToken()
         const refreshToken = user.generateRefreshToken()
 
-        console.log("refreshtoken Genreted:", refreshToken)
+        // console.log("refreshtoken Genreted:", refreshToken)
 
         user.refreshToken = refreshToken
         await user.save({ validateBeforeSave: false })
@@ -120,7 +120,7 @@ const loginUser = asyncHandler(async (req, res) =>{
     //send cookie
 
     const {email, username, password} = req.body
-    console.log(email,password);
+    // console.log(email,password);
 
     if (!username && !email) {
         throw new ApiError(400, "username or email is required")
@@ -199,7 +199,7 @@ const logoutUser = asyncHandler(async(req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
-    console.log(incomingRefreshToken)
+    // console.log(incomingRefreshToken)
 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "unauthorized request")
@@ -217,13 +217,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Invalid refresh token")
         }
         
-        console.log(user.refreshToken)
+        // console.log(user.refreshToken)
+
         if (incomingRefreshToken !== user?.refreshToken) {
             throw new ApiError(401, "Refresh token is expired or used")
             
         }
 
-        console.log(user._id)
+        // console.log(user._id)
     
         const options = {
             httpOnly: true,
@@ -232,7 +233,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         
         const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
-        console.log(refreshToken)
+        // console.log(refreshToken)
     
         return res
         .status(200)
