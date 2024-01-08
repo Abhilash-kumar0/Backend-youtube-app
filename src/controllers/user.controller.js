@@ -263,7 +263,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 //         throw new ApiError(400, "Invalid old password")
 //     }
 
-//     user.password = newPassword
+//     user.password = newPassword 
 //     await user.save({validateBeforeSave: false})
 
 //     return res
