@@ -15,7 +15,7 @@ const generateAccessAndRefreshTokens = async(userId) =>{
         const accessToken = user.generateAccessToken()
         const refreshToken = user.generateRefreshToken()
 
-        // console.log("refreshtoken Generated:", refreshToken)
+        // console.log("refreshToken Generated:", refreshToken)
 
         user.refreshToken = refreshToken 
         await user.save({ validateBeforeSave: false })
@@ -24,7 +24,7 @@ const generateAccessAndRefreshTokens = async(userId) =>{
 
 
     } catch (error) {
-        throw new ApiError(500, "Something went wrong while generating refresh and access token")
+        throw new ApiError(500, error.message || "Something went wrong while generating refresh and access token")
     }
 }
 
@@ -66,7 +66,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (existedUser) {
         throw new ApiError(409, "User with email or username already exists")
     }
-    //console.log(req.files);
+    
 
     const avatarLocalPath = req.files?.avatar[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
@@ -83,8 +83,8 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Avatar file is required")
     }
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const avatar = await uploadOnCloudinary(avatarLocalPath,"videoTube/Images")
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath,"videoTube/Images")
     
     // console.log(avatar)
 
@@ -114,7 +114,7 @@ const registerUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, createdUser, "User registered Successfully")
     )
 
-} )
+})
 
 const loginUser = asyncHandler(async (req, res) =>{
     // req body -> data
@@ -204,7 +204,6 @@ const logoutUser = asyncHandler(async(req, res) => {
     .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged Out"))
 })
-
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
@@ -327,8 +326,8 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
     )
 })
 
-
 const updateUserAvatar = asyncHandler(async (req, res) => {
+    
     const avatarLocalPath = req.file?.path;
   
     if (!avatarLocalPath) {
@@ -338,7 +337,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     try {
 
       // Upload the new avatar to Cloudinary
-      const avatar = await uploadOnCloudinary(avatarLocalPath)
+      const avatar = await uploadOnCloudinary(avatarLocalPath,"videoTube/Images")
   
       if (!avatar.url) {
         throw new ApiError(400, "Error while updating avatar on Cloudinary")
@@ -353,9 +352,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         },{new:true}
       ).select("-password")
 
-      await deleteFromCloudinary(req.user?.avatar)
+      if (!updatedUser) {
+        throw new ApiError(500, "Error while updating user document");
+      }
 
-      return res.status(200).json(
+      await deleteFromCloudinary(req.user?.avatar, "videoTube/Images",'image')
+
+      return res.status(200).json( 
         new ApiResponse(
           200,
           updatedUser,
@@ -379,7 +382,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     try {
     
         // Upload the new cover image to Cloudinary
-        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath,"videoTube/Images");
 
         if (!coverImage.url) {
             throw new ApiError(400, "Error while updating cover image on Cloudinary");
@@ -394,6 +397,10 @@ const updateCoverImage = asyncHandler(async (req, res) => {
             }
         )
 
+        if (!updateCoverImage) {
+            throw new ApiError(500, "Error while updating user document");
+          }
+
          //   // Update the user's cover image URL and public ID
          //   user.coverImage = coverImage.url;
          //   user.coverImagePublicId = coverImage.public_id; 
@@ -401,7 +408,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
          //   const updatedUser = await user.save({ validateBeforeSave: false });
 
         // Delete the old cover image from Cloudinary
-        await deleteFromCloudinary(req.user?.coverImage);
+        await deleteFromCloudinary(req.user?.coverImage,"videoTube/Images",'image');
     
   
         return res.status(200).json(
@@ -415,7 +422,6 @@ const updateCoverImage = asyncHandler(async (req, res) => {
       throw new ApiError(500, error.message, "Something went wrong while updating cover image");
     } 
 })
-
 
 const getUserChannelProfile = asyncHandler(async(req,res)=>{
     const {username} = req.params
@@ -473,7 +479,6 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
                 avatar: 1,
                 coverImage: 1,
                 email: 1
-
             }
         }
     ])
@@ -491,6 +496,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
 })
   
 const getWatchHistory = asyncHandler(async(req,res)=>{
+    // console.log(req.user)
     const user = await User.aggregate([
         {
             $match: {
